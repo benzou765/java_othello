@@ -1,21 +1,20 @@
 package othello;
 
-import java.awt.Color;
-import java.awt.Dimension;
+import java.io.File;
+import java.io.IOException;
+import java.awt.Graphics;
+import java.awt.image.BufferedImage;
 
-import javax.swing.JLabel;
-import javax.swing.ImageIcon;
-import javax.swing.border.LineBorder;
+import javax.imageio.ImageIO;
 
-@SuppressWarnings("serial")
-class Panel extends JLabel {
+class Panel {
     private static final String IMG_BLACK_PATH = "../img/black.png";
     private static final String IMG_WHITE_PATH = "../img/white.png";
     public static final int IMAGE_WIDTH = 64;
     public static final int IMAGE_HEIGHT = 64;
 
-    private ImageIcon whiteIcon;
-    private ImageIcon blackIcon;
+    private BufferedImage whiteImage;
+    private BufferedImage blackImage;
 
     public enum DiscColor {
         None,
@@ -25,13 +24,24 @@ class Panel extends JLabel {
 
     private DiscColor state;
 
+    private final int x;
+    private final int y;
+
     /**
      * コンストラクタ、オセロの枠
+     * @param x 描画時のX座標の位置
+     * @param y 描画時のY座標の位置
      */
-    Panel() {
-        whiteIcon = new ImageIcon(IMG_WHITE_PATH);
-        blackIcon = new ImageIcon(IMG_BLACK_PATH);
+    Panel(int x, int y) {
+        try {
+            whiteImage = ImageIO.read(new File(IMG_WHITE_PATH));
+            blackImage = ImageIO.read(new File(IMG_BLACK_PATH));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         this.state = DiscColor.None;
+        this.x = x;
+        this.y = y;
     }
 
     /**
@@ -42,11 +52,9 @@ class Panel extends JLabel {
         switch(discColor) {
         case White:
             this.state = DiscColor.White;
-            this.setWhite();
             break;
         case Black:
             this.state = DiscColor.Black;
-            this.setBlack();
             break;
         default:
             break;
@@ -54,25 +62,25 @@ class Panel extends JLabel {
     }
 
     /**
-     * 石を白に変更
-     */
-    public void setWhite() {
-        setIcon(whiteIcon);
-        setPreferredSize(new Dimension(IMAGE_WIDTH, IMAGE_HEIGHT));
-    }
-
-    /**
-     * 石を黒に変更
-     */
-    public void setBlack() {
-        setIcon(blackIcon);
-        setPreferredSize(new Dimension(IMAGE_WIDTH, IMAGE_HEIGHT));
-    }
-
-    /**
      * 石の色を取得する
      */
     public DiscColor getDisc() {
         return this.state;
+    }
+
+    /**
+     * 描画処理
+     */
+    public void draw(Graphics g) {
+        switch(this.state) {
+        case White:
+            g.drawImage(whiteImage, this.x, this.y, null);
+            break;
+        case Black:
+            g.drawImage(blackImage, this.x, this.y, null);
+            break;
+        default:
+            break;
+        }
     }
 }

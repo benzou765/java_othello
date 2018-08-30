@@ -5,31 +5,28 @@ import java.awt.Color;
 import java.awt.Container;
 import java.awt.Dimension;
 import java.awt.Graphics;
-import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Point;
 import java.awt.event.MouseListener;
-import java.awt.geom.Line2D;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
-import javax.swing.JPanel;
-import javax.swing.JButton;
-import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.JOptionPane;
+
 import othello.Panel;
+import othello.Panel.DiscColor;
 
 /**
  * オセロ
  */
 @SuppressWarnings("serial")
-class Othello extends JFrame implements MouseListener {
+class Othello extends JPanel implements MouseListener {
     /**
-     * ゲーム画面の大きさを定義する定数
+     * パネルのサイズ
      */
-    private static final int WIDTH  = 512;
-    private static final int TITLE_BAR = 22;
-    private static final int HEIGHT = 512 + TITLE_BAR;
+    private static final int WIDTH = 512;
+    private static final int HEIGHT = 512;
 
     /**
      * オセロ盤のサイズ
@@ -96,32 +93,14 @@ class Othello extends JFrame implements MouseListener {
     private Image back;
 
     /**
-     * メインクラス
-     * @param String[] 引数
-     */
-    public static void main(String args[]) {
-        JFrame frame = new Othello("オセロ");
-        frame.setVisible(true);
-    }
-
-    /**
      * コンストラクタ、ゲーム本体
-     * @param String ウィンドウタイトル
      */
-    Othello(String title) {
-        // ウィンドウの初期化
-        setTitle(title);
-        setBounds(100, 100, WIDTH, HEIGHT);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
+    Othello() {
         // 描画準備
-        setLayout(null);
-        JPanel gamespace = new JPanel();
-        gamespace.setBackground(Color.GREEN);
-        gamespace.setPreferredSize(new Dimension(WIDTH, HEIGHT));
-        gamespace.setLayout(null);
-        gamespace.setBounds(0, 0, WIDTH, HEIGHT);
-        this.getContentPane().add(gamespace);
+        this.setBackground(Color.GREEN);
+        this.setPreferredSize(new Dimension(WIDTH, HEIGHT));
+        this.setLayout(null);
+        this.setBounds(0, 0, WIDTH, HEIGHT);
         Dimension dimension = this.getSize();
         this.back = createImage(dimension.width, dimension.height);
 
@@ -132,9 +111,7 @@ class Othello extends JFrame implements MouseListener {
             for(int i = 0; i < SIZE_X; i++) {
                 int x = FRAME_WIDTH * i;
                 int y = FRAME_HEIGHT * j;
-                Panel panel = new Panel();
-                panel.setBounds(x, y, FRAME_WIDTH, FRAME_HEIGHT);
-                gamespace.add(panel);
+                Panel panel = new Panel(x, y);
                 row.add(panel);
             }
             this.board.add(row);
@@ -161,7 +138,23 @@ class Othello extends JFrame implements MouseListener {
 //        Graphics buffer = back.getGraphics();
         // 枠線の描画
         g.setColor(Color.BLACK);
-        g.drawLine(0, 0, 200, 200);
+        // 縦線
+        for (int i = 0; i < SIZE_X; i++) {
+            g.drawLine((FRAME_WIDTH * i), 0, (FRAME_WIDTH * i), HEIGHT);
+            g.drawLine((FRAME_WIDTH * (i+1) - 1), 0, (FRAME_WIDTH * (i+1) - 1), HEIGHT);
+        }
+        // 横線
+        for (int i = 0; i < SIZE_Y; i++) {
+            g.drawLine(0, (FRAME_HEIGHT * i), WIDTH, (FRAME_WIDTH * i));
+            g.drawLine(0, (FRAME_WIDTH * (i+1) - 1), WIDTH, (FRAME_WIDTH * (i+1) - 1));
+        }
+
+        // 石の描画
+        for(ArrayList<Panel> row : this.board) {
+            for(Panel panel : row) {
+                panel.draw(g);
+            }
+        }
     }
 
     /**
@@ -197,7 +190,7 @@ class Othello extends JFrame implements MouseListener {
      */
     public void mouseClicked(MouseEvent e) {
         if (isControl) {
-            if(e.getButton() == MouseEvent.BUTTON2) {
+            if (e.getButton() == MouseEvent.BUTTON2) {
                 // 中央クリック時はパスとみなす
                 System.out.println("パス");
                 this.turnNext();
@@ -212,20 +205,17 @@ class Othello extends JFrame implements MouseListener {
                 break;
             }
 
-            // 石の配置
+            // クリック場所の取得
             Point boardPoint = this.getBoardPoint(e.getPoint());
-            ArrayList<Point> sandwichedDiscs = this.getSandwichedDisc(boardPoint, color);
+            if (this.board.get(boardPoint.y).get(boardPoint.x).getDisc() == Panel.DiscColor.None) {
+                ArrayList<Point> sandwichedDiscs = this.getSandwichedDisc(boardPoint, color);
 
-            if(this.checkNextTurn(sandwichedDiscs)) {
-                // 更新して次ターンへ
-                this.setDisc(boardPoint, color);
-                this.changeDisc(sandwichedDiscs, color);
-                this.turnNext();
-            }
-        }
-        for(ArrayList<Panel> row : this.board) {
-            for(Panel panel : row) {
-                panel.repaint();
+                if(this.checkNextTurn(sandwichedDiscs)) {
+                    // 石を配置して次ターンへ
+                    this.setDisc(boardPoint, color);
+                    this.changeDisc(sandwichedDiscs, color);
+                    this.turnNext();
+                }
             }
         }
         repaint();
@@ -277,6 +267,8 @@ class Othello extends JFrame implements MouseListener {
     private void turnNext() {
         this.isControl = false;
         if (this.checkFinish()) {
+            // debug
+            System.out.println("End");
             this.drawWinner();
             return;
         }
@@ -317,7 +309,7 @@ class Othello extends JFrame implements MouseListener {
      */
     private Point getBoardPoint(Point point) {
         int x = point.x / FRAME_WIDTH;
-        int y = (point.y - TITLE_BAR) / FRAME_HEIGHT;
+        int y = point.y / FRAME_HEIGHT;
         return new Point(x, y);
     }
 
@@ -326,6 +318,7 @@ class Othello extends JFrame implements MouseListener {
      * @param point 配置する石の盤上の座標
      * @param color 配置する石の色
      * @return 挟まれている石の座標リスト
+     * TODO 画面端の処理
      */
     private ArrayList<Point> getSandwichedDisc(Point point, Panel.DiscColor setColor) {
         ArrayList<Point> sandwichedDiscs = new ArrayList<Point>();
@@ -339,14 +332,20 @@ class Othello extends JFrame implements MouseListener {
         while(y >= 0) {
             Panel.DiscColor targetColor = board.get(y).get(x).getDisc();
             if(targetColor == Panel.DiscColor.None) {
+                // 置いた石と異なる色の石がないので、石は挟まれていない
                 addDiscs.clear();
                 break;
             }
             if(targetColor == setColor) {
+                // 置いた石と同じ色の石ならループ終了
                 break;
             }
             addDiscs.add(new Point(x, y));
             y--;
+        }
+        if (y == -1) {
+            // 端までいっても異なる色の石がないので、石は挟まれていない
+            addDiscs.clear();
         }
         for(Point pt : addDiscs) {
             sandwichedDiscs.add(pt);
@@ -359,15 +358,21 @@ class Othello extends JFrame implements MouseListener {
         while(x < SIZE_X && y >= 0) {
             Panel.DiscColor targetColor = board.get(y).get(x).getDisc();
             if(targetColor == Panel.DiscColor.None) {
+                // 置いた石と異なる色の石がないので、石は挟まれていない
                 addDiscs.clear();
                 break;
             }
             if(targetColor == setColor) {
+                // 置いた石と同じ色の石ならループ終了
                 break;
             }
             addDiscs.add(new Point(x, y));
             x++;
             y--;
+        }
+        if (x == SIZE_X || y == -1) {
+            // 端までいっても異なる色の石がないので、石は挟まれていない
+            addDiscs.clear();
         }
         for(Point pt : addDiscs) {
             sandwichedDiscs.add(pt);
@@ -380,14 +385,20 @@ class Othello extends JFrame implements MouseListener {
         while(x < SIZE_X) {
             Panel.DiscColor targetColor = board.get(y).get(x).getDisc();
             if(targetColor == Panel.DiscColor.None) {
+                // 置いた石と異なる色の石がないので、石は挟まれていない
                 addDiscs.clear();
                 break;
             }
             if(targetColor == setColor) {
+                // 置いた石と同じ色の石ならループ終了
                 break;
             }
             addDiscs.add(new Point(x, y));
             x++;
+        }
+        if (x == SIZE_X) {
+            // 端までいっても異なる色の石がないので、石は挟まれていない
+            addDiscs.clear();
         }
         for(Point pt : addDiscs) {
             sandwichedDiscs.add(pt);
@@ -400,15 +411,21 @@ class Othello extends JFrame implements MouseListener {
         while(x < SIZE_X && y < SIZE_Y) {
             Panel.DiscColor targetColor = board.get(y).get(x).getDisc();
             if(targetColor == Panel.DiscColor.None) {
+                // 置いた石と異なる色の石がないので、石は挟まれていない
                 addDiscs.clear();
                 break;
             }
             if(targetColor == setColor) {
+                // 置いた石と同じ色の石ならループ終了
                 break;
             }
             addDiscs.add(new Point(x, y));
             x++;
             y++;
+        }
+        if (x == SIZE_X || y == SIZE_Y) {
+            // 端までいっても異なる色の石がないので、石は挟まれていない
+            addDiscs.clear();
         }
         for(Point pt : addDiscs) {
             sandwichedDiscs.add(pt);
@@ -421,14 +438,20 @@ class Othello extends JFrame implements MouseListener {
         while(y < SIZE_Y) {
             Panel.DiscColor targetColor = board.get(y).get(x).getDisc();
             if(targetColor == Panel.DiscColor.None) {
+                // 置いた石と異なる色の石がないので、石は挟まれていない
                 addDiscs.clear();
                 break;
             }
             if(targetColor == setColor) {
+                // 置いた石と同じ色の石ならループ終了
                 break;
             }
             addDiscs.add(new Point(x, y));
             y++;
+        }
+        if (y == SIZE_Y) {
+            // 端までいっても異なる色の石がないので、石は挟まれていない
+            addDiscs.clear();
         }
         for(Point pt : addDiscs) {
             sandwichedDiscs.add(pt);
@@ -441,15 +464,21 @@ class Othello extends JFrame implements MouseListener {
         while(x >= 0 && y < SIZE_Y) {
             Panel.DiscColor targetColor = board.get(y).get(x).getDisc();
             if(targetColor == Panel.DiscColor.None) {
+                // 置いた石と異なる色の石がないので、石は挟まれていない
                 addDiscs.clear();
                 break;
             }
             if(targetColor == setColor) {
+                // 置いた石と同じ色の石ならループ終了
                 break;
             }
             addDiscs.add(new Point(x, y));
             x--;
             y++;
+        }
+        if (x == -1 || y == SIZE_Y) {
+            // 端までいっても異なる色の石がないので、石は挟まれていない
+            addDiscs.clear();
         }
         for(Point pt : addDiscs) {
             sandwichedDiscs.add(pt);
@@ -462,14 +491,20 @@ class Othello extends JFrame implements MouseListener {
         while(x >= 0) {
             Panel.DiscColor targetColor = board.get(y).get(x).getDisc();
             if(targetColor == Panel.DiscColor.None) {
+                // 置いた石と異なる色の石がないので、石は挟まれていない
                 addDiscs.clear();
                 break;
             }
             if(targetColor == setColor) {
+                // 置いた石と同じ色の石ならループ終了
                 break;
             }
             addDiscs.add(new Point(x, y));
             x--;
+        }
+        if (x == -1) {
+            // 端までいっても異なる色の石がないので、石は挟まれていない
+            addDiscs.clear();
         }
         for(Point pt : addDiscs) {
             sandwichedDiscs.add(pt);
@@ -482,15 +517,21 @@ class Othello extends JFrame implements MouseListener {
         while(x >= 0 && y >= 0) {
             Panel.DiscColor targetColor = board.get(y).get(x).getDisc();
             if(targetColor == Panel.DiscColor.None) {
+                // 置いた石と異なる色の石がないので、石は挟まれていない
                 addDiscs.clear();
                 break;
             }
             if(targetColor == setColor) {
+                // 置いた石と同じ色の石ならループ終了
                 break;
             }
             addDiscs.add(new Point(x, y));
             x--;
             y--;
+        }
+        if (x == -1 || y == -1) {
+            // 端までいっても異なる色の石がないので、石は挟まれていない
+            addDiscs.clear();
         }
         for(Point pt : addDiscs) {
             sandwichedDiscs.add(pt);
@@ -502,6 +543,7 @@ class Othello extends JFrame implements MouseListener {
 
     /**
      * 勝敗の表示
+     * TODO
      */
     private void drawWinner() {
         JLabel label = new JLabel();
@@ -512,6 +554,13 @@ class Othello extends JFrame implements MouseListener {
      * @return ゲームが終了したかどうか
      */
     private boolean checkFinish() {
-        return false;
+        for (ArrayList<Panel> row : this.board) {
+            for (Panel panel : row) {
+                if(panel.getDisc() == Panel.DiscColor.None) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 }

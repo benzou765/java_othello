@@ -1,4 +1,4 @@
 #!/bin/sh
 
 cd class
-java othello.Othello
+java othello.Game
