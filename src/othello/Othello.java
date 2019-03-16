@@ -60,7 +60,8 @@ class Othello extends JPanel implements MouseListener {
     private enum StateName {
         Playing,
         FirstWin,
-        SecondWin
+        SecondWin,
+        Draw
     };
 
     /**
@@ -88,9 +89,14 @@ class Othello extends JPanel implements MouseListener {
     private VsComputer vsComputer;
 
     /**
-     * 画面処理のバッファ
+     * ゲーム状態
      */
-    private Image back;
+    private StateName state;
+
+    /**
+     * 勝敗を示すラベル
+     */
+    private Label label;
 
     /**
      * コンストラクタ、ゲーム本体
@@ -127,6 +133,8 @@ class Othello extends JPanel implements MouseListener {
         this.turn = TurnName.First;
         this.isControl = true;
         this.vsComputer = VsComputer.None;
+        this.state = Othello.StateName.Playing;
+        this.label = null;
 
         // 操作受付
         addMouseListener(this);
@@ -154,6 +162,11 @@ class Othello extends JPanel implements MouseListener {
             for(Panel panel : row) {
                 panel.draw(g);
             }
+        }
+
+        // 勝敗の描画
+        if(this.label != null) {
+            this.label.draw(g);
         }
     }
 
@@ -189,7 +202,7 @@ class Othello extends JPanel implements MouseListener {
      * マウスクリック時の操作
      */
     public void mouseClicked(MouseEvent e) {
-        if (isControl) {
+        if (this.isControl) {
             if (e.getButton() == MouseEvent.BUTTON2) {
                 // 中央クリック時はパスとみなす
                 System.out.println("パス");
@@ -266,10 +279,25 @@ class Othello extends JPanel implements MouseListener {
      */
     private void turnNext() {
         this.isControl = false;
-        if (this.checkFinish()) {
+        this.checkState();
+        if (this.state != Othello.StateName.Playing) {
+            this.isControl = false;
+            this.label = new Label();
+            switch(this.state) {
+            case FirstWin:
+                this.label.loadImage(Label.Issue.Win);
+                break;
+            case SecondWin:
+                this.label.loadImage(Label.Issue.Lose);
+                break;
+            case Draw:
+                this.label.loadImage(Label.Issue.Draw);
+                break;
+            case Playing:
+                break;
+            }
             // debug
-            System.out.println("End");
-            this.drawWinner();
+            System.out.println("State:" + this.state);
             return;
         }
         if (this.turn == TurnName.First) {
@@ -318,7 +346,6 @@ class Othello extends JPanel implements MouseListener {
      * @param point 配置する石の盤上の座標
      * @param color 配置する石の色
      * @return 挟まれている石の座標リスト
-     * TODO 画面端の処理
      */
     private ArrayList<Point> getSandwichedDisc(Point point, Panel.DiscColor setColor) {
         ArrayList<Point> sandwichedDiscs = new ArrayList<Point>();
@@ -542,25 +569,39 @@ class Othello extends JPanel implements MouseListener {
     }
 
     /**
-     * 勝敗の表示
-     * TODO
+     * ゲームの状態を更新
      */
-    private void drawWinner() {
-        JLabel label = new JLabel();
-    }
-
-    /**
-     * ゲームの状態を確認
-     * @return ゲームが終了したかどうか
-     */
-    private boolean checkFinish() {
+    private void checkState() {
+        int whiteStoneNum = 0;
+        int blackStoneNum = 0;
         for (ArrayList<Panel> row : this.board) {
             for (Panel panel : row) {
-                if(panel.getDisc() == Panel.DiscColor.None) {
-                    return false;
+                Panel.DiscColor color = panel.getDisc();
+                switch(color) {
+                case White:
+                    whiteStoneNum += 1;
+                    break;
+                case Black:
+                    blackStoneNum += 1;
+                    break;
+                case None:
+                    this.state = Othello.StateName.Playing;
+                    return;
                 }
             }
         }
-        return true;
+        // debug
+        System.out.println("White:" + whiteStoneNum + ", Black:" + blackStoneNum);
+        // ゲームの終了条件を満たしたので、勝敗判定
+        if(whiteStoneNum < blackStoneNum) {
+            // 黒が多い = 先手の勝利
+            this.state = Othello.StateName.FirstWin;
+        } else if(whiteStoneNum > blackStoneNum) {
+            // 白が多い = 後手の勝利
+            this.state = Othello.StateName.SecondWin;
+        } else {
+            // 同数 = 引き分け
+            this.state =  Othello.StateName.Draw;
+        }
     }
 }

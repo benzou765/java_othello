@@ -34,8 +34,8 @@ class Panel {
      */
     Panel(int x, int y) {
         try {
-            whiteImage = ImageIO.read(new File(IMG_WHITE_PATH));
-            blackImage = ImageIO.read(new File(IMG_BLACK_PATH));
+            this.whiteImage = ImageIO.read(new File(IMG_WHITE_PATH));
+            this.blackImage = ImageIO.read(new File(IMG_BLACK_PATH));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -74,10 +74,10 @@ class Panel {
     public void draw(Graphics g) {
         switch(this.state) {
         case White:
-            g.drawImage(whiteImage, this.x, this.y, null);
+            g.drawImage(this.whiteImage, this.x, this.y, null);
             break;
         case Black:
-            g.drawImage(blackImage, this.x, this.y, null);
+            g.drawImage(this.blackImage, this.x, this.y, null);
             break;
         default:
             break;
